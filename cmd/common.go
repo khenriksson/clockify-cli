@@ -15,6 +15,7 @@ import (
 	"github.com/lucassabreu/clockify-cli/api"
 	"github.com/lucassabreu/clockify-cli/api/dto"
 	"github.com/lucassabreu/clockify-cli/reports"
+	"github.com/lucassabreu/clockify-cli/reportsapi"
 	stackedErrors "github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,7 +33,34 @@ var nowTimeFormat = "now"
 
 func withClockifyClient(fn func(cmd *cobra.Command, args []string, c *api.Client) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		c, err := getAPIClient()
+		c, err := api.NewClient(viper.GetString("token"))
+		if err != nil {
+			return err
+		}
+
+		if viper.GetBool("debug") {
+			c.Logger = log.New(os.Stdout, "DEBUG - api - ", log.LstdFlags)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		return fn(cmd, args, c)
+	}
+}
+
+func withClockifyReportsClient(fn func(cmd *cobra.Command, args []string, c *reportsapi.ReportsClient) error) func(*cobra.Command, []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		c, err := reportsapi.NewReportsClient(viper.GetString("token"))
+		if err != nil {
+			return err
+		}
+
+		if viper.GetBool("debug") {
+			c.Logger = log.New(os.Stdout, "DEBUG - reportsapi - ", log.LstdFlags)
+		}
+
 		if err != nil {
 			return err
 		}
@@ -67,19 +95,6 @@ func convertToTime(timeString string) (t time.Time, err error) {
 	}
 
 	return time.ParseInLocation(fullTimeFormat, timeString, time.Local)
-}
-
-func getAPIClient() (*api.Client, error) {
-	c, err := api.NewClient(viper.GetString("token"))
-	if err != nil {
-		return c, err
-	}
-
-	if viper.GetBool("debug") {
-		c.Logger = log.New(os.Stdout, "DEBUG ", log.LstdFlags)
-	}
-
-	return c, err
 }
 
 func getDateTimeParam(name string, required bool, value string, convert func(string) (time.Time, error)) (*time.Time, error) {
