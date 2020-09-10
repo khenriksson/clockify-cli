@@ -31,17 +31,22 @@ var onlyTimeFormat = "15:04:05"
 var simplerOnlyTimeFormat = "15:04"
 var nowTimeFormat = "now"
 
+func getAPIClient() (*api.Client, error) {
+	c, err := api.NewClient(viper.GetString("token"))
+	if err != nil {
+		return c, err
+	}
+
+	if viper.GetBool("debug") {
+		c.Logger = log.New(os.Stdout, "DEBUG - api - ", log.LstdFlags)
+	}
+
+	return c, err
+}
+
 func withClockifyClient(fn func(cmd *cobra.Command, args []string, c *api.Client) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		c, err := api.NewClient(viper.GetString("token"))
-		if err != nil {
-			return err
-		}
-
-		if viper.GetBool("debug") {
-			c.Logger = log.New(os.Stdout, "DEBUG - api - ", log.LstdFlags)
-		}
-
+		c, err := getAPIClient()
 		if err != nil {
 			return err
 		}
